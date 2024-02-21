@@ -4,7 +4,7 @@ import urllib.parse
 import hashlib
 from datetime import datetime
 
-s3 = boto3.client('s3')
+s3_cliente = boto3.client('s3')
 dynamobd = boto3.resource('dynamodb')
 table = dynamobd.Table('ai-technical-test-schavar') # podría guardarse en una variable de entorno o secreto
 
@@ -13,7 +13,7 @@ def lambda_handler(event, context):
     key = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
     
     try:
-        response_get = s3.get_object(Bucket=bucket, Key=key)
+        response_get = s3_cliente.get_object(Bucket=bucket, Key=key)
         print(response_get)
         
         file = response_get['Body'].read().decode('utf-8')
@@ -33,7 +33,7 @@ def lambda_handler(event, context):
 
         #genero el hash con los datos del archivo
         md5_template = hashlib.md5()
-        md5_template.update(texto.encode())
+        md5_template.update(text_for_encode.encode())
         md5_created = md5_template.hexdigest()
 
         print("Se comparan los hash:")
@@ -61,7 +61,7 @@ def lambda_handler(event, context):
         response_delete = s3_cliente.delete_object(Bucket=bucket, Key=key)
         print(response_delete)
 
-        return 0
+        return "Ejecución exitosa"
     except Exception as e:
         print(e)
         raise e
