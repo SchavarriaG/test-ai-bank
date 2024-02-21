@@ -3,6 +3,7 @@ import json
 import urllib.parse
 import hashlib
 from datetime import datetime
+from botocore.exceptions import ClientError
 
 s3_cliente = boto3.client('s3')
 dynamobd = boto3.resource('dynamodb')
@@ -18,31 +19,18 @@ def lambda_handler(event, context):
         
         file = response_get['Body'].read().decode('utf-8')
         lines = file.splitlines()  
+        md5_extracted = lines[7].split("=")[1]
         
-        md5_extracted = lines[7].split("=")[1]  #extraigo el reglón del hash
-
-        text_for_encode = ""
         items = []
         values = []
-        for i in range(len(lines)-1):
+        for i in range(len(lines)):
             items.append(lines[i].split("=")[0])
-            values.append(int(lines[i].split("=")[1]))
-            text_for_encode += str(values[i]) + "~"  #concateno solo valores
+            values.append(lines[i].split("=")[1])
 
-        text_for_encode = text_for_encode[:-1] #elimino último caracter
-
-        #genero el hash con los datos del archivo
-        md5_template = hashlib.md5()
-        md5_template.update(text_for_encode.encode())
-        md5_created = md5_template.hexdigest()
-
-        print("Se comparan los hash:")
-        print(str(md5_created) == str(md5_extracted))
-
-        localtime_now = datetime.now().timestamp()
+        validate_md5(md5_extracted,values)
 
         registry={
-            'timestamp':str(localtime_now), #mejor en str para obtener decimales
+            'timestamp':str(datetime.now().timestamp()), #mejor en str para obtener decimales
             items[0]:values[0],
             items[1]:values[1],
             items[2]:values[2],
@@ -61,7 +49,31 @@ def lambda_handler(event, context):
         response_delete = s3_cliente.delete_object(Bucket=bucket, Key=key)
         print(response_delete)
 
-        return "Ejecución exitosa"
-    except Exception as e:
-        print(e)
+        return "Execution Success"
+    except IndexError as e:
+        print("Error in the structure of the document.")
         raise e
+    except ClientError as e:
+        print("Execution failed: Possible error in access permissions on AWS resources.")
+        raise e
+    except Exception as e:
+        print("Execution failed")
+        raise e
+
+def validate_md5(md5_extracted, values):
+    text_for_encode = ""
+    for value in values[:-1]:
+        text_for_encode += str(value) + "~" #concateno solo valores
+
+    text_for_encode = text_for_encode[:-1] #elimino último caracter
+
+    md5_template = hashlib.md5()
+    md5_template.update(text_for_encode.encode())
+    md5_created = md5_template.hexdigest()
+    
+    print("Hash compared:")
+    if str(md5_extracted) != str(md5_created):
+        print("Failed, Hash dont match!")
+        raise Exception("Sorry, the hash dont match.")
+    print("Success")
+    return "Comparition Success"

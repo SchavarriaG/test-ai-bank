@@ -1,0 +1,14 @@
+mkdir lambdaCompressed
+pip install -r dependencies.txt -t lambdaCompressed/
+cp lambdaFinal.py lambdaCompressed/
+
+creo el zip con el contenido de esta carpeta
+
+
+aws lambda update-function-code --function-name ai-technical-test-schavar --zip-file fileb://lambdaCompressed.zip
+
+para ejecutar pruebas de carpeta test:
+coverage run -m unittest discover test
+
+generar reporte de covertura:
+coverage report
