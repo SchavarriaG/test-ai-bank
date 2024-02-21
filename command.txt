@@ -1,4 +1,5 @@
 mkdir lambdaCompressed
+pip freeze > dependencies.txt
 pip install -r dependencies.txt -t lambdaCompressed/
 cp lambdaFinal.py lambdaCompressed/
 
